@@ -419,7 +419,7 @@ function renderP4(){
   }
   let html=`<thead><tr>${thS('name','Tên NV')}${thS('pos','Vị trí')}<th>Loại</th>`;
   MONTHS.forEach((m,i)=>{html+=thS(`pts_${m}`,MONTH_LABELS[i]);});
-  html+=`<th>Biến động<br><small>${LATEST_MONTH} vs ${PREV_MONTH??'—'}</small></th></tr></thead><tbody>`;
+  html+=`<th>Tổng điểm</th></tr></thead><tbody>`;
 
   displayRows.forEach(r=>{
     const isHO=r.pos==='Handover';
@@ -432,19 +432,27 @@ function renderP4(){
     MONTHS.forEach(m=>{
       const md=r.months[m];
       if(!md){html+=`<td class="na">—</td>`;return;}
-      const cls=isHO?'':rag(md.pct);
-      const sub=isHO?``:(md.pct!=null?`<br><small style="opacity:.8">${md.pct}%</small>`:'');
-      html+=`<td ${cls?`class="${cls}"`:'style="background:#e8f5e9"'} style="text-align:center"><strong>${fmt(md.pts)}</strong>${sub}</td>`;
+      if(isHO){
+        html+=`<td style="background:#e8f5e9;text-align:center;font-weight:700">${fmt(md.pts)}</td>`;
+      }else{
+        const kpiF=r.kpi_min||0;
+        const vuot=kpiF>0?md.pts-kpiF:md.pts;
+        const vColor=vuot>=0?'#1b5e20':'#b71c1c';
+        const vSign=vuot>=0?'+':'';
+        const cls=rag(md.pct);
+        html+=`<td ${cls?`class="${cls}"`:''}style="text-align:center;font-weight:700;color:${vColor}">${vSign}${fmt(vuot)}</td>`;
+      }
     });
-    const tPrev=PREV_MONTH?r.months[PREV_MONTH]?.pts:null;
-    const tLast=r.months[LATEST_MONTH]?.pts;
-    if(tPrev!=null&&tLast!=null){
-      const delta=tLast-tPrev,s=delta>=0?'+':'',col=delta>0?'#1b5e20':delta<0?'#b71c1c':'#555';
-      html+=`<td style="text-align:center;font-weight:700;color:${col};white-space:nowrap">${s}${fmt(delta)}</td>`;
-    }else{html+=`<td class="na">—</td>`;}
+    const kpiFloor=r.kpi_min||0;
+    const totalAll=MONTHS.reduce((sum,m)=>{
+      const pts=r.months[m]?.pts;
+      if(pts==null)return sum;
+      return sum+(pts-kpiFloor);
+    },0);
+    html+=`<td style="text-align:center;font-weight:700;color:${totalAll>=0?'#1a3a6c':'#b71c1c'}">${fmt(totalAll)}</td>`;
     html+=`</tr>`;
   });
-  if(!displayRows.length)html+=`<tr><td colspan="9" class="nodata">Không có nhân viên phù hợp</td></tr>`;
+  if(!displayRows.length)html+=`<tr><td colspan="${3+MONTHS.length+1}" class="nodata">Không có nhân viên phù hợp</td></tr>`;
   document.getElementById('p4-table').innerHTML=html+'</tbody>';
 }
 function p4Sort(col){if(p4SortCol===col)p4SortAsc=!p4SortAsc;else{p4SortCol=col;p4SortAsc=false;}renderP4();}
