@@ -97,7 +97,7 @@ tr:hover td.r{background:#ffebee!important}
     </div>
     <div class="card-body">
       <p style="font-size:12px;color:#555;margin-bottom:10px">Chỉ hiển thị hạng mục có tổng điểm > 0.</p>
-      <table><thead><tr><th class="tl">Hạng mục</th><th>Vị trí</th><th>Tổng điểm</th><th>Số NV</th><th>NV Chính thức</th><th>NV Thời vụ</th></tr></thead>
+      <table><thead><tr><th class="tl">Hạng mục</th><th>Vị trí</th><th>Tổng điểm</th></tr></thead>
       <tbody id="p2-body"></tbody></table>
     </div>
   </div>
@@ -303,17 +303,17 @@ function renderP2(m){
     if(!jobs[col])return;
     const d=jobs[col];
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tl" style="font-weight:600">${col}</td><td>${d.pos.join(', ')}</td><td><strong>${fmt(d.pts)}</strong></td><td>${d.nv} NV</td><td>${d.nv_ct??0} NV</td><td>${d.nv_tv??0} NV</td>`;
+    tr.innerHTML=`<td class="tl" style="font-weight:600">${col}</td><td>${d.pos.join(', ')}</td><td><strong>${fmt(d.pts)}</strong></td>`;
     tbody.appendChild(tr);
   });
   const ho=HO_DATA[m];
   if(ho&&ho.nv>0){
     const tr=document.createElement('tr');
     tr.style.background='#e8f5e9';
-    tr.innerHTML=`<td class="tl" style="font-weight:700;color:#1b5e20">Bàn giao <small style="font-weight:normal;color:#555">(Handover)</small></td><td style="color:#1b5e20;font-weight:600">Handover</td><td><strong>${fmt(ho.total_pts)}</strong></td><td>${ho.nv} NV</td><td>${ho.nv_ct??0} NV</td><td>${ho.nv_tv??0} NV</td>`;
+    tr.innerHTML=`<td class="tl" style="font-weight:700;color:#1b5e20">Bàn giao <small style="font-weight:normal;color:#555">(Handover)</small></td><td style="color:#1b5e20;font-weight:600">Handover</td><td><strong>${fmt(ho.total_pts)}</strong></td>`;
     tbody.appendChild(tr);
   }
-  if(!tbody.children.length)tbody.innerHTML=`<tr><td colspan="6" class="nodata">Không có dữ liệu</td></tr>`;
+  if(!tbody.children.length)tbody.innerHTML=`<tr><td colspan="3" class="nodata">Không có dữ liệu</td></tr>`;
 }
 mkMonthSel('p2-months',LATEST_MONTH,renderP2);
 renderP2(LATEST_MONTH);
@@ -446,7 +446,7 @@ function p4Sort(col){if(p4SortCol===col)p4SortAsc=!p4SortAsc;else{p4SortCol=col;
 // ============================================================
 // Cột hiển thị theo từng bộ phận
 const DEPT_JOB_SHOWN={
-  Receiver:['Nhận hàng','Hạ tải','Dán Nhãn','Nhập liệu','Kiểm hoàn'],
+  Receiver:['Nhận hàng','Hạ tải','Dán Nhãn','Kiểm hoàn'],
   Controller:['Lưu kho DR','Lưu kho PA','Chuyển vị trí','Kiểm kho'],
   Packer:['Đóng gói'],
   Picker:['Lấy hàng'],
@@ -454,8 +454,8 @@ const DEPT_JOB_SHOWN={
 };
 // Cột được TÍNH vào Tổng điểm
 const DEPT_JOB_COUNTED={
-  Receiver:['Nhận hàng','Hạ tải','Nhập liệu','Dán Nhãn'],
-  Controller:['Lưu kho DR','Lưu kho PA','Chuyển vị trí'],
+  Receiver:['Nhận hàng','Hạ tải','Dán Nhãn'],
+  Controller:['Lưu kho DR','Lưu kho PA','Chuyển vị trí','Kiểm kho'],
   Packer:['Đóng gói'],
   Picker:['Lấy hàng'],
   Handover:['Bàn giao']
@@ -562,6 +562,7 @@ function renderP6(){
 
   // --- Build table ---
   const extraCols=shown.length;
+  const totalCols=3+extraCols+3; // #, Tên NV, Loại + shown + KPI tối thiểu + Tổng điểm + KPI vượt
   let html='<thead><tr>';
   html+=`<th>#</th><th class="tl" style="min-width:140px">Tên NV</th><th>Loại</th>`;
   shown.forEach(j=>{
@@ -570,7 +571,7 @@ function renderP6(){
       ?`<th style="min-width:82px;background:#9e9e9e;color:#fff;font-style:italic;font-weight:normal">${j}<br><small style="opacity:.85;font-size:10px">(tham khảo)</small></th>`
       :`<th style="min-width:82px">${j}</th>`;
   });
-  html+=`<th>KPI tối thiểu</th><th>Tổng điểm</th><th>KPI vượt</th><th>% KPI vượt</th></tr></thead><tbody>`;
+  html+=`<th>KPI tối thiểu</th><th>Tổng điểm</th><th>KPI vượt</th></tr></thead><tbody>`;
 
   let rows=emps.map(e=>{
     const jp=getEmpJobPts(e,month);
@@ -579,12 +580,11 @@ function renderP6(){
   }).sort((a,b)=>b.ft-a.ft);
 
   if(!emps.length){
-    html+=`<tr><td colspan="${3+extraCols+4}" class="nodata">Không có dữ liệu ${dept} trong ${mlabel}</td></tr>`;
+    html+=`<tr><td colspan="${totalCols}" class="nodata">Không có dữ liệu ${dept} trong ${mlabel}</td></tr>`;
   }else{
     rows.forEach((r,i)=>{
       const hasKpi=r.kpi_min!=null&&r.kpi_min>0;
       const vuot=hasKpi?r.ft-r.kpi_min:null;
-      const vuotPct=hasKpi?(vuot/r.kpi_min*100).toFixed(1):null;
       const newPct=hasKpi?r.ft/r.kpi_min*100:null;
       const cls=rag(newPct);
       const vc=vuot!=null?(vuot>=0?'#1b5e20':'#b71c1c'):'#888';
@@ -610,7 +610,6 @@ function renderP6(){
       html+=`<td>${hasKpi?fmt(r.kpi_min):'<span class="na">N/A</span>'}</td>`;
       html+=`<td class="${cls}"><strong>${fmt(r.ft)}</strong></td>`;
       html+=`<td style="font-weight:700;color:${vc}">${vuot!=null?vs+fmt(vuot):'<span class="na">—</span>'}</td>`;
-      html+=`<td style="font-weight:700;color:${vc}">${vuotPct!=null?vs+vuotPct+'%':'<span class="na">—</span>'}</td>`;
       html+=`</tr>`;
     });
   }
@@ -642,7 +641,7 @@ function renderP6(){
   });
   tfoot+=`<td style="background:#eef3ff"></td>`;
   tfoot+=`<td style="text-align:center;background:#eef3ff"><strong style="color:#1a3a6c">${rowCount} NV</strong></td>`;
-  tfoot+=`<td style="background:#eef3ff"></td><td style="background:#eef3ff"></td>`;
+  tfoot+=`<td style="background:#eef3ff"></td>`;
   tfoot+='</tr>';
 
   // Row 2: Tổng điểm per job column + tổng ft (tất cả tính từ rows đang hiển thị)
@@ -659,12 +658,12 @@ function renderP6(){
   });
   tfoot+=`<td style="background:#dce8ff"></td>`;
   tfoot+=`<td style="text-align:center;background:#dce8ff;border-left:2px solid #1a3a6c"><strong style="color:#0d2a5a;font-size:12px">${fmt(totalFt)}</strong></td>`;
-  tfoot+=`<td style="background:#dce8ff"></td><td style="background:#dce8ff"></td>`;
+  tfoot+=`<td style="background:#dce8ff"></td>`;
   tfoot+='</tr>';
 
   // Legend note khi có reference values từ RAW_JOBS
   const anyRef=shown.some(j=>{const rawNv=(RAW_JOBS[month]||{})[j]?.nv??null;return rawNv!=null&&!rows.some(r=>r.jp[j]!=null&&r.jp[j]>0);});
-  if(anyRef)tfoot+=`<tr style="background:#fff9e6"><td colspan="${3+extraCols+4}" style="font-size:10px;color:#888;padding:3px 8px;font-style:italic">* Số NV tham chiếu từ RAW_JOBS (chưa có dữ liệu chi tiết RAW_EMP_DETAIL).</td></tr>`;
+  if(anyRef)tfoot+=`<tr style="background:#fff9e6"><td colspan="${totalCols}" style="font-size:10px;color:#888;padding:3px 8px;font-style:italic">* Số NV tham chiếu từ RAW_JOBS (chưa có dữ liệu chi tiết RAW_EMP_DETAIL).</td></tr>`;
   tfoot+='</tfoot>';
 
   const tbl=document.getElementById('p6-table');
